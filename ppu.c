@@ -245,17 +245,18 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
         u16 patt_addr = sys->tall_sprites
             ? ((sys->OAM2[4 * i + 1] & 0x01) << 12) | ((sys->OAM2[4 * i + 1] & 0xFE) << 4) | ((x_pos & 8) << 1) | (x_pos & 7)
             : (sys->sp_table << 12) | (sys->OAM2[4 * i + 1] << 4) | x_pos;
+        bool in_range = x_pos < (sys->tall_sprites ? 16 : 8);
         switch (sys->pixel % 8) {
         case 6: {
             sys->sprite_attr[i] = sys->OAM2[4 * i + 2];
             sys->sprite_x[i] = sys->OAM2[4 * i + 3];
-            u8 patt = ppu_read(sys, patt_addr);
+            u8 patt = in_range ? ppu_read(sys, patt_addr) : 0x00;
             sys->sprite_patt_low[i] = sys->sprite_attr[i] & 0x40 ? flip_bits(patt) : patt;
             break;
         }
         case 0: {
             patt_addr |= 0x0008;
-            u8 patt = ppu_read(sys, patt_addr);
+            u8 patt = in_range ? ppu_read(sys, patt_addr) : 0x00;
             sys->sprite_patt_high[i] = sys->sprite_attr[i] & 0x40 ? flip_bits(patt) : patt;
             break;
         }

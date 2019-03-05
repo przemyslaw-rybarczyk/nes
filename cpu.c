@@ -471,7 +471,7 @@ void cpu_step(System *sys) {
         sys->state = ABSr2;
         break;
     case ABSr2:
-        sys->addr_ |= (u16)sys->data << 8;
+        sys->addr_ |= sys->data << 8;
         sys->PC++;
         sys->state = ABSr3;
         break;
@@ -485,8 +485,8 @@ void cpu_step(System *sys) {
         sys->state = ABXr2;
         break;
     case ABXr2:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->X;
-        sys->addr_ = (u16)sys->data << 8 | (u8)(sys->addr_ + sys->X);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->X;
+        sys->addr_ = sys->data << 8 | (u8)(sys->addr_ + sys->X);
         sys->PC++;
         sys->state = ABXr3;
         break;
@@ -509,8 +509,8 @@ void cpu_step(System *sys) {
         sys->state = ABYr2;
         break;
     case ABYr2:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->Y;
-        sys->addr_ = (u16)sys->data << 8 | (u8)(sys->addr_ + sys->Y);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->Y;
+        sys->addr_ = sys->data << 8 | (u8)(sys->addr_ + sys->Y);
         sys->PC++;
         sys->state = ABYr3;
         break;
@@ -542,7 +542,7 @@ void cpu_step(System *sys) {
         sys->state = IZXr4;
         break;
     case IZXr4:
-        sys->addr_ |= (u16)sys->data << 8;
+        sys->addr_ |= sys->data << 8;
         sys->state = IZXr5;
         break;
     case IZXr5:
@@ -618,7 +618,7 @@ void cpu_step(System *sys) {
         sys->state = ABSw2;
         break;
     case ABSw2:
-        sys->addr_ |= (u16)sys->data << 8;
+        sys->addr_ |= sys->data << 8;
         sys->PC++;
         sys->state = ABSw3;
         break;
@@ -632,8 +632,8 @@ void cpu_step(System *sys) {
         sys->state = ABXw2;
         break;
     case ABXw2:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->X;
-        sys->addr_ = (u16)sys->data << 8 | (u8)(sys->addr_ + sys->X);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->X;
+        sys->addr_ = sys->data << 8 | (u8)(sys->addr_ + sys->X);
         sys->PC++;
         sys->state = ABXw3;
         break;
@@ -651,8 +651,8 @@ void cpu_step(System *sys) {
         sys->state = ABYw2;
         break;
     case ABYw2:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->Y;
-        sys->addr_ = (u16)sys->data << 8 | (u8)(sys->addr_ + sys->Y);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->Y;
+        sys->addr_ = sys->data << 8 | (u8)(sys->addr_ + sys->Y);
         sys->PC++;
         sys->state = ABYw3;
         break;
@@ -679,7 +679,7 @@ void cpu_step(System *sys) {
         sys->state = IZXw4;
         break;
     case IZXw4:
-        sys->addr_ |= (u16)sys->data << 8;
+        sys->addr_ |= sys->data << 8;
         sys->state = IZXw5;
         break;
     case IZXw5:
@@ -697,8 +697,8 @@ void cpu_step(System *sys) {
         sys->state = IZYw3;
         break;
     case IZYw3:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->Y;
-        sys->addr_ = ((u16)sys->data << 8) + (u8)(sys->addr_ + sys->Y);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->Y;
+        sys->addr_ = (sys->data << 8) + (u8)(sys->addr_ + sys->Y);
         sys->state = IZYw4;
         break;
     case IZYw4:
@@ -749,7 +749,7 @@ void cpu_step(System *sys) {
         sys->state = ABSb2;
         break;
     case ABSb2:
-        sys->addr_ |= (u16)sys->data << 8;
+        sys->addr_ |= sys->data << 8;
         sys->PC++;
         sys->state = ABSb3;
         break;
@@ -769,8 +769,8 @@ void cpu_step(System *sys) {
         sys->state = ABXb2;
         break;
     case ABXb2:
-        sys->ptr_ = sys->addr_ + ((u16)sys->data << 8) + sys->X;
-        sys->addr_ = (u16)sys->data << 8 | (u8)(sys->addr_ + sys->X);
+        sys->ptr_ = sys->addr_ + (sys->data << 8) + sys->X;
+        sys->addr_ = sys->data << 8 | (u8)(sys->addr_ + sys->X);
         sys->PC++;
         sys->state = ABXb3;
         break;
@@ -794,7 +794,7 @@ void cpu_step(System *sys) {
         sys->state = ABSj2;
         break;
     case ABSj2:
-        sys->PC = ((u16)sys->data << 8) | sys->addr_;
+        sys->PC = (sys->data << 8) | sys->addr_;
         sys->state = XXX_0;
         break;
     case INDj1:
@@ -803,7 +803,7 @@ void cpu_step(System *sys) {
         sys->state = INDj2;
         break;
     case INDj2:
-        sys->ptr_ |= (u16)sys->data << 8;
+        sys->ptr_ |= sys->data << 8;
         sys->PC++;
         sys->state = INDj3;
         break;
@@ -813,7 +813,7 @@ void cpu_step(System *sys) {
         sys->state = INDj4;
         break;
     case INDj4:
-        sys->PC = ((u16)sys->data << 8) | sys->addr_;
+        sys->PC = (sys->data << 8) | sys->addr_;
         sys->state = XXX_0;
         break;
     case REL_1:
@@ -897,7 +897,7 @@ void cpu_step(System *sys) {
         sys->state = JSR_5;
         break;
     case JSR_5:
-        sys->PC = ((u16)sys->data << 8) | sys->addr_;
+        sys->PC = (sys->data << 8) | sys->addr_;
         sys->state = XXX_0;
         break;
     case RTS_1:
@@ -908,12 +908,12 @@ void cpu_step(System *sys) {
         sys->state = RTS_3;
         break;
     case RTS_3:
-        sys->PC = sys->data;
+        sys->PC = (sys->PC & 0xFF00) | sys->data;
         sys->S++;
         sys->state = RTS_4;
         break;
     case RTS_4:
-        sys->PC |= (u16)sys->data << 8;
+        sys->PC = (sys->PC & 0x00FF) | sys->data << 8;
         sys->state = RTS_5;
         break;
     case RTS_5:
@@ -945,13 +945,12 @@ void cpu_step(System *sys) {
         sys->state = BRK_5;
         break;
     case BRK_5:
-        // TODO FIX THIS READ
-        sys->PC = sys->data;
+        sys->PC = (sys->PC & 0xFF00) | sys->data;
         sys->addr_++;
         sys->state = BRK_6;
         break;
     case BRK_6:
-        sys->PC |= (u16)sys->data << 8;
+        sys->PC = (sys->PC & 0x00FF) | sys->data << 8;
         sys->state = XXX_0;
         break;
     case RTI_1:
@@ -972,12 +971,12 @@ void cpu_step(System *sys) {
         sys->state = RTI_4;
         break;
     case RTI_4:
-        sys->PC = sys->data;
+        sys->PC = (sys->PC & 0xFF00) | sys->data;
         sys->S++;
         sys->state = RTI_5;
         break;
     case RTI_5:
-        sys->PC |= (u16)sys->data << 8;
+        sys->PC = (sys->PC & 0x00FF) | sys->data << 8;
         sys->state = XXX_0;
         break;
     case INV_x:
