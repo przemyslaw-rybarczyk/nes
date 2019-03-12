@@ -270,7 +270,11 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
     if (sys->pixel > 340) {
         sys->pixel = 0;
         sys->scanline++;
-        if (sys->scanline > 261)
+        if (sys->scanline > 261) {
             sys->scanline = 0;
+            if (sys->odd_frame)
+                sys->pixel = 1;
+        }
     }
+    sys->odd_frame = !sys->odd_frame;
 }

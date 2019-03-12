@@ -37,6 +37,7 @@ System *new_System(Mapper *mapper) {
     sys->PPU_t = 0x0000;
     sys->PPU_x = 0x00;
     sys->PPU_w = false;
+    sys->APU_cycle_counter = 0;
     for (int i = 0; i < 0x800; i++)
         sys->VRAM[i] = rand();
     for (int i = 0; i < 0x20; i++)
@@ -45,6 +46,11 @@ System *new_System(Mapper *mapper) {
         sys->OAM[i] = rand();
     return sys;
 }
+
+u8 length_counter_load[32] = {
+     10, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
+     12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30,
+};
 
 u8 cpu_read(System *sys, u16 addr) {
     if (addr < 0x2000)
@@ -66,16 +72,22 @@ u8 cpu_read(System *sys, u16 addr) {
             break;
         }
         return sys->PPU_bus;
-    } else if (addr < 0x4018) {
+    } else if (addr < 0x4020) {
         switch (addr) {
+        case 0x4015:
+            sys->data = sys->pulse1_length_counter > 0;
+            break;
         case 0x4016:
             sys->data = (sys->data & 0xE0) | ((sys->controller_shift & 0x80) >> 7);
             sys->controller_shift = sys->controller_shift << 1 | 1;
+            break;
         }
         return sys->data;
     } else
         return sys->mapper->cpu_read(sys->mapper, addr, sys->data);
 }
+
+extern int cyc;
 
 void cpu_write(System *sys, u16 addr, u8 data) {
     if (addr < 0x2000)
@@ -132,17 +144,75 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->PPU_v += sys->PPUDATA_increment ? 0x20 : 0x1;
             break;
         }
-    } else if (addr < 0x4018)
+    } else if (addr < 0x4018) {
         switch (addr) {
+        case 0x4000:
+            sys->pulse1_duty = data >> 6;
+            sys->pulse1_halt = data & 0x20;
+            sys->pulse1_const_volume = data & 0x10;
+            sys->pulse1_volume = data & 0x0F;
+            break;
+        case 0x4001:
+            sys->pulse1_sweep.enable = data & 0x80;
+            sys->pulse1_sweep.period = (data & 0x70) >> 4;
+            sys->pulse1_sweep.negate = data & 0x08;
+            sys->pulse1_sweep.shift = data & 0x07;
+            sys->pulse1_sweep.reload = true;
+            break;
+        case 0x4002:
+            sys->pulse1_period = (sys->pulse1_period & 0x700) | data;
+            break;
+        case 0x4003:
+            sys->pulse1_length_counter = length_counter_load[data >> 3];
+            sys->pulse1_period = (sys->pulse1_period & 0x0FF) | (data & 0x03) << 8;
+            sys->pulse1_sequencer = 0;
+            sys->pulse1_envelope.start = true;
+            break;
+        case 0x4004:
+            sys->pulse2_duty = data >> 6;
+            sys->pulse2_halt = data & 0x20;
+            sys->pulse2_const_volume = data & 0x10;
+            sys->pulse2_volume = data & 0x0F;
+            break;
+        case 0x4005:
+            sys->pulse2_sweep.enable = data & 0x80;
+            sys->pulse2_sweep.period = (data & 0x70) >> 4;
+            sys->pulse2_sweep.negate = data & 0x08;
+            sys->pulse2_sweep.shift = data & 0x07;
+            sys->pulse2_sweep.reload = true;
+            break;
+        case 0x4006:
+            sys->pulse2_period = (sys->pulse2_period & 0x700) | data;
+            break;
+        case 0x4007:
+            sys->pulse2_length_counter = length_counter_load[data >> 3];
+            sys->pulse2_period = (sys->pulse2_period & 0x0FF) | (data & 0x03) << 8;
+            sys->pulse2_sequencer = 0;
+            sys->pulse2_envelope.start = true;
+            break;
         case 0x4014:
             sys->OAMDMA_state = -1;
             sys->OAMDMA_addr = data << 8;
             break;
+        case 0x4015:
+            sys->pulse2_enable = data & 0x02;
+            if (!sys->pulse2_enable)
+                sys->pulse2_length_counter = 0;
+            sys->pulse1_enable = data & 0x01;
+            if (!sys->pulse1_enable)
+                sys->pulse1_length_counter = 0;
+            break;
         case 0x4016:
             sys->strobe = data & 0x01;
             break;
+        case 0x4017:
+            sys->APU_sequencer_mode = data & 0x80;
+            sys->APU_interrupt_inhibit = data & 0x40;
+            if (sys->APU_interrupt_inhibit)
+                sys->APU_interrupt = false;
+            break;
         }
-    else
+    } else
         sys->mapper->cpu_write(sys->mapper, addr, data);
 }
 

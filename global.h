@@ -64,6 +64,22 @@ typedef enum CPU_State {
     INV_x,
 } CPU_State;
 
+typedef struct APU_Sweep {
+    bool enable;
+    u8 period;
+    bool negate;
+    u8 shift;
+    u16 target;
+    u16 divider;
+    bool reload;
+} APU_Sweep;
+
+typedef struct APU_Envelope {
+    bool start;
+    u8 divider;
+    u8 decay;
+} APU_Envelope;
+
 typedef struct System {
     Mapper *mapper;
     // CPU
@@ -89,6 +105,7 @@ typedef struct System {
     // PPU
     u16 scanline;
     u16 pixel;
+    bool odd_frame;
     bool PPUDATA_increment;
     bool sp_table;
     bool bg_table;
@@ -119,6 +136,33 @@ typedef struct System {
     u8 PPU_bus;
     u8 sprite0;
     u8 sprite0_next;
+    // APU
+    u16 APU_cycle_counter;
+    bool APU_interrupt;
+    bool APU_sequencer_mode;
+    bool APU_interrupt_inhibit;
+    bool pulse1_enable;
+    u8 pulse1_duty;
+    bool pulse1_halt;
+    bool pulse1_const_volume;
+    u8 pulse1_volume;
+    APU_Sweep pulse1_sweep;
+    u8 pulse1_sequencer;
+    u16 pulse1_timer;
+    u16 pulse1_period;
+    u8 pulse1_length_counter;
+    APU_Envelope pulse1_envelope;
+    bool pulse2_enable;
+    u8 pulse2_duty;
+    bool pulse2_halt;
+    bool pulse2_const_volume;
+    u8 pulse2_volume;
+    APU_Sweep pulse2_sweep;
+    u8 pulse2_sequencer;
+    u16 pulse2_timer;
+    u16 pulse2_period;
+    u8 pulse2_length_counter;
+    APU_Envelope pulse2_envelope;
     // input
     bool strobe;
     u8 controller_shift;
