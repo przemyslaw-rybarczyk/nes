@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
         ppu_step(sys, renderer);
         ppu_step(sys, renderer);
         ppu_step(sys, renderer);
-        apu_sample = apu_step(sys) / 16;
+        apu_sample = apu_step(sys);
         int src_err = src_process(src_state, &src_data);
         if (src_err) {
             eprintln("libsamplerate error: %s", src_strerror(src_err));

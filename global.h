@@ -163,6 +163,15 @@ typedef struct System {
     u16 pulse2_period;
     u8 pulse2_length_counter;
     APU_Envelope pulse2_envelope;
+    bool triangle_enable;
+    bool triangle_halt;
+    u8 triangle_counter_reload;
+    u8 triangle_counter;
+    u8 triangle_sequencer;
+    u16 triangle_timer;
+    u16 triangle_period;
+    u8 triangle_length_counter;
+    bool triangle_reload;
     // input
     bool strobe;
     u8 controller_shift;

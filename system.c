@@ -75,7 +75,10 @@ u8 cpu_read(System *sys, u16 addr) {
     } else if (addr < 0x4020) {
         switch (addr) {
         case 0x4015:
-            sys->data = sys->pulse1_length_counter > 0;
+            sys->data = 
+                  (sys->triangle_length_counter > 0) << 2
+                | (sys->pulse2_length_counter > 0) << 1
+                | (sys->pulse1_length_counter > 0) << 0;
             break;
         case 0x4016:
             sys->data = (sys->data & 0xE0) | ((sys->controller_shift & 0x80) >> 7);
@@ -190,11 +193,26 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->pulse2_sequencer = 0;
             sys->pulse2_envelope.start = true;
             break;
+        case 0x4008:
+            sys->triangle_halt = data & 0x80;
+            sys->triangle_counter_reload = data & 0x7F;
+            break;
+        case 0x400A:
+            sys->triangle_period = (sys->triangle_period & 0x700) | data;
+            break;
+        case 0x400B:
+            sys->triangle_length_counter = length_counter_load[data >> 3];
+            sys->triangle_period = (sys->triangle_period & 0x0FF) | (data & 0x03) << 8;
+            sys->triangle_reload = true;
+            break;
         case 0x4014:
             sys->OAMDMA_state = -1;
             sys->OAMDMA_addr = data << 8;
             break;
         case 0x4015:
+            sys->triangle_enable = data & 0x04;
+            if (!sys->triangle_enable)
+                sys->triangle_length_counter = 0;
             sys->pulse2_enable = data & 0x02;
             if (!sys->pulse2_enable)
                 sys->pulse2_length_counter = 0;
@@ -207,6 +225,7 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             break;
         case 0x4017:
             sys->APU_sequencer_mode = data & 0x80;
+            sys->APU_cycle_counter = sys->APU_sequencer_mode ? 37281 : 0;
             sys->APU_interrupt_inhibit = data & 0x40;
             if (sys->APU_interrupt_inhibit)
                 sys->APU_interrupt = false;

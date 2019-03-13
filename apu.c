@@ -1,11 +1,16 @@
 #include "global.h"
 #include "apu.h"
 
-float duty_cycles[4][8] = {
+int duty_cycles[4][8] = {
     {0, 0, 0, 0, 0, 0, 0, 1},
     {0, 0, 0, 0, 0, 0, 1, 1},
     {0, 0, 0, 0, 1, 1, 1, 1},
     {1, 1, 1, 1, 1, 1, 0, 0},
+};
+
+int triangle_wave[32] = {
+    15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
 };
 
 void apu_envelope_update(APU_Envelope *envelope, u8 volume, bool loop) {
@@ -31,6 +36,13 @@ void apu_envelope_update(APU_Envelope *envelope, u8 volume, bool loop) {
 void apu_quarter_frame(System *sys) {
     apu_envelope_update(&sys->pulse1_envelope, sys->pulse1_volume, sys->pulse1_halt);
     apu_envelope_update(&sys->pulse2_envelope, sys->pulse2_volume, sys->pulse2_halt);
+    if (sys->triangle_reload)
+        sys->triangle_counter = sys->triangle_counter_reload;
+    else if (sys->triangle_counter > 0)
+        sys->triangle_counter--;
+    println("%d: TC is %d", sys->APU_cycle_counter, sys->triangle_counter);
+    if (!sys->triangle_halt)
+        sys->triangle_reload = false;
 }
 
 void apu_apply_sweep(APU_Sweep *sweep, u16 *period) {
@@ -51,6 +63,8 @@ void apu_half_frame(System *sys) {
     if (!sys->pulse2_halt && sys->pulse2_length_counter > 0)
         sys->pulse2_length_counter--;
     apu_apply_sweep(&sys->pulse2_sweep, &sys->pulse2_period);
+    if (!sys->triangle_halt && sys->triangle_length_counter > 0)
+        sys->triangle_length_counter--;
 }
 
 void apu_calculate_sweep_target(APU_Sweep *sweep, u16 period, u16 i) {
@@ -86,6 +100,12 @@ float apu_step(System *sys) {
         : 0;
     if ((sys->APU_cycle_counter & 1) == 0 && apu_timer_tick(&sys->pulse2_timer, sys->pulse2_period))
         sys->pulse2_sequencer = (sys->pulse2_sequencer - 1) & 7;
+
+    float triangle = sys->triangle_enable && sys->triangle_length_counter > 0
+        ? triangle_wave[sys->triangle_sequencer]
+        : 0;
+    if (apu_timer_tick(&sys->triangle_timer, sys->triangle_period) && sys->triangle_length_counter > 0 && sys->triangle_counter > 0)
+        sys->triangle_sequencer = (sys->triangle_sequencer + 1) % 32;
 
     switch (sys->APU_sequencer_mode) {
     case 0:
@@ -134,5 +154,7 @@ float apu_step(System *sys) {
     sys->APU_cycle_counter++;
     if (sys->APU_cycle_counter > (sys->APU_sequencer_mode ? 37281 : 29829))
         sys->APU_cycle_counter = 0;
-    return (pulse1 + pulse2) / 2;
+    float pulse_out = pulse1 + pulse2 ? 95.88 / (8128 / (pulse1 + pulse2) + 100) : 0;
+    float tnd_out = triangle ? 159.79 / (1 / (triangle / 8227) + 100) : 0;
+    return pulse_out + tnd_out;
 }
