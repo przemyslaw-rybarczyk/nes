@@ -40,7 +40,6 @@ void apu_quarter_frame(System *sys) {
         sys->triangle_counter = sys->triangle_counter_reload;
     else if (sys->triangle_counter > 0)
         sys->triangle_counter--;
-    println("%d: TC is %d", sys->APU_cycle_counter, sys->triangle_counter);
     if (!sys->triangle_halt)
         sys->triangle_reload = false;
 }

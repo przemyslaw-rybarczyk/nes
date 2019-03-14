@@ -2,20 +2,20 @@
 
 #include "global.h"
 
-typedef struct NROM128 {
+typedef struct NROM {
     Mapper base;
-    Mirroring mirroring;
-    u8 prg_rom[0x4000];
-    u8 chr_rom[0x2000];
-} NROM128;
+} NROM;
 
-NROM128 *new_NROM128(void);
+void NROM_init(NROM *mapper);
 
-typedef struct NROM256 {
+typedef struct MMC1 {
     Mapper base;
-    Mirroring mirroring;
-    u8 prg_rom[0x8000];
-    u8 chr_rom[0x2000];
-} NROM256;
+    u8 shift;
+    u8 prg_rom_bank_mode;
+    bool chr_rom_bank_mode;
+    u8 chr_bank0;
+    u8 chr_bank1;
+    u8 prg_bank;
+} MMC1;
 
-NROM256 *new_NROM256(void);
+void MMC1_init(MMC1 *mapper);

@@ -240,7 +240,7 @@ u8 ppu_read(System *sys, u16 addr) {
     if (addr < 0x2000)
         return sys->mapper->ppu_read(sys->mapper, addr);
     else if (addr < 0x3F00) {
-        switch (sys->mapper->mirroring(sys->mapper)) {
+        switch (sys->mapper->mirroring) {
         case MIRR_HORIZONTAL:
             addr = (addr & 0x03FF) | ((addr >> 1) & 0x0400);
             break;
@@ -261,7 +261,7 @@ void ppu_write(System *sys, u16 addr, u8 data) {
     if (addr < 0x2000)
         sys->mapper->ppu_write(sys->mapper, addr, data);
     else if (addr < 0x3F00) {
-        switch (sys->mapper->mirroring(sys->mapper)) {
+        switch (sys->mapper->mirroring) {
         case MIRR_HORIZONTAL:
             addr = (addr & 0x03FF) | ((addr >> 1) & 0x0400);
             break;

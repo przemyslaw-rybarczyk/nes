@@ -57,8 +57,6 @@ float src_data_out[SRC_DATA_OUT_SIZE];
 
 System *saved_state;
 
-extern int apu_cyc;
-
 int main(int argc, char **argv) {
     srand(time(NULL));
     saved_state = malloc(sizeof(System));
@@ -78,38 +76,31 @@ int main(int argc, char **argv) {
         exit(1);
     }
     u8 mapper_num = (header[7] & 0xF0) | (header[6] >> 4);
-    u8 prg_rom_size = header[4];
     Mapper *mapper;
     switch (mapper_num) {
-    case 0: {
-        bool mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
-        switch (prg_rom_size) {
-        case 1: {
-            NROM128 *mapper_ = new_NROM128();
-            s_fread(&mapper_->prg_rom, 1, 0x4000, f);
-            s_fread(&mapper_->chr_rom, 1, 0x2000, f);
-            mapper_->mirroring = mirroring;
-            mapper = mapper_;
-            break;
-        }
-        case 2: {
-            NROM256 *mapper_ = new_NROM256();
-            s_fread(&mapper_->prg_rom, 1, 0x8000, f);
-            s_fread(&mapper_->chr_rom, 1, 0x2000, f);
-            mapper_->mirroring = mirroring;
-            mapper = mapper_;
-            break;
-        }
-        default:
-            eprintln("Error: invalid PRG ROM size for mapper 0");
-            exit(1);
-        }
+    case 0:
+        mapper = s_malloc(sizeof(NROM));
+        NROM_init(mapper);
+        mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
-    }
+    case 1:
+        mapper = s_malloc(sizeof(MMC1));
+        MMC1_init(mapper);
+        break;
     default:
         eprintln("Error: unsupported mapper (%d)", mapper_num);
         exit(1);
     }
+    mapper->prg_rom_size = header[4];
+    mapper->chr_rom_size = header[5];
+    if (mapper->chr_rom_size == 0) {
+        println("Error: CHR RAM not supported");
+        exit(1);
+    }
+    mapper->prg_rom = s_malloc(mapper->prg_rom_size * 0x4000);
+    s_fread(mapper->prg_rom, 1, mapper->prg_rom_size * 0x4000, f);
+    mapper->chr_rom = s_malloc(mapper->chr_rom_size * 0x2000);
+    s_fread(mapper->chr_rom, 1, mapper->chr_rom_size * 0x2000, f);
     if (fclose(f) != 0)
         eprintln("Error closing file");
     System *sys = new_System(mapper);
