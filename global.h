@@ -14,6 +14,8 @@ typedef int8_t i8;
 typedef int16_t i16;
 
 typedef enum Mirroring {
+    MIRR_ONE_SCREEN_LOW,
+    MIRR_ONE_SCREEN_HIGH,
     MIRR_HORIZONTAL,
     MIRR_VERTICAL,
 } Mirroring;
@@ -189,6 +191,7 @@ typedef struct System {
     u8 pal_RAM[0x20];
     u8 RAM[0x800];
     u8 VRAM[0x800];
+    u8 WRAM[0x2000];
 } System;
 
 extern u8 controller_state;

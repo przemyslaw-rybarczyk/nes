@@ -86,11 +86,11 @@ u8 cpu_read(System *sys, u16 addr) {
             break;
         }
         return sys->data;
-    } else
+    } else if (addr >= 0x6000 && addr < 0x8000)
+        return sys->WRAM[addr - 0x6000];
+    else
         return sys->mapper->cpu_read(sys->mapper, addr, sys->data);
 }
-
-extern int cyc;
 
 void cpu_write(System *sys, u16 addr, u8 data) {
     if (addr < 0x2000)
@@ -147,7 +147,7 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->PPU_v += sys->PPUDATA_increment ? 0x20 : 0x1;
             break;
         }
-    } else if (addr < 0x4018) {
+    } else if (addr < 0x4020) {
         switch (addr) {
         case 0x4000:
             sys->pulse1_duty = data >> 6;
@@ -231,25 +231,32 @@ void cpu_write(System *sys, u16 addr, u8 data) {
                 sys->APU_interrupt = false;
             break;
         }
-    } else
+    } else if (addr >= 0x6000 && addr < 0x8000)
+        sys->WRAM[addr - 0x6000] = data;
+    else
         sys->mapper->cpu_write(sys->mapper, addr, data);
+}
+
+u16 decode_VRAM_addr(u16 addr, Mirroring mirroring) {
+    switch (mirroring) {
+    case MIRR_ONE_SCREEN_LOW:
+        return addr & 0x03FF;
+    case MIRR_ONE_SCREEN_HIGH:
+        return (addr & 0x03FF) | 0x0400;
+    case MIRR_HORIZONTAL:
+        return (addr & 0x03FF) | ((addr >> 1) & 0x0400);
+    case MIRR_VERTICAL:
+        return addr & 0x07FF;
+    }
 }
 
 u8 ppu_read(System *sys, u16 addr) {
     addr &= 0x3FFF;
     if (addr < 0x2000)
         return sys->mapper->ppu_read(sys->mapper, addr);
-    else if (addr < 0x3F00) {
-        switch (sys->mapper->mirroring) {
-        case MIRR_HORIZONTAL:
-            addr = (addr & 0x03FF) | ((addr >> 1) & 0x0400);
-            break;
-        case MIRR_VERTICAL:
-            addr &= 0x07FF;
-            break;
-        }
-        return sys->VRAM[addr];
-    } else {
+    else if (addr < 0x3F00)
+        return sys->VRAM[decode_VRAM_addr(addr, sys->mapper->mirroring)];
+    else {
         if ((addr & 0x0003) == 0)
             addr &= 0xFFEF;
         return sys->pal_RAM[addr % 0x20];
@@ -260,17 +267,9 @@ void ppu_write(System *sys, u16 addr, u8 data) {
     addr &= 0x3FFF;
     if (addr < 0x2000)
         sys->mapper->ppu_write(sys->mapper, addr, data);
-    else if (addr < 0x3F00) {
-        switch (sys->mapper->mirroring) {
-        case MIRR_HORIZONTAL:
-            addr = (addr & 0x03FF) | ((addr >> 1) & 0x0400);
-            break;
-        case MIRR_VERTICAL:
-            addr &= 0x07FF;
-            break;
-        }
-        sys->VRAM[addr] = data;
-    } else {
+    else if (addr < 0x3F00)
+        sys->VRAM[decode_VRAM_addr(addr, sys->mapper->mirroring)] = data;
+    else {
         if ((addr & 0x0003) == 0)
             addr &= 0xFFEF;
         sys->pal_RAM[addr % 0x20] = data;

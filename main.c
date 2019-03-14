@@ -93,14 +93,13 @@ int main(int argc, char **argv) {
     }
     mapper->prg_rom_size = header[4];
     mapper->chr_rom_size = header[5];
-    if (mapper->chr_rom_size == 0) {
-        println("Error: CHR RAM not supported");
-        exit(1);
-    }
     mapper->prg_rom = s_malloc(mapper->prg_rom_size * 0x4000);
     s_fread(mapper->prg_rom, 1, mapper->prg_rom_size * 0x4000, f);
-    mapper->chr_rom = s_malloc(mapper->chr_rom_size * 0x2000);
-    s_fread(mapper->chr_rom, 1, mapper->chr_rom_size * 0x2000, f);
+    if (mapper->chr_rom_size > 0) {
+        mapper->chr_rom = s_malloc(mapper->chr_rom_size * 0x2000);
+        s_fread(mapper->chr_rom, 1, mapper->chr_rom_size * 0x2000, f);
+    } else
+        mapper->chr_rom = s_malloc(0x2000);
     if (fclose(f) != 0)
         eprintln("Error closing file");
     System *sys = new_System(mapper);

@@ -44,7 +44,7 @@ u8 MMC1_cpu_read(MMC1 *mapper, u16 addr, u8 data_bus) {
     }
 }
 
-Mirroring MMC1_mirroring_table[4] = {MIRR_VERTICAL, MIRR_HORIZONTAL, MIRR_VERTICAL, MIRR_HORIZONTAL};
+Mirroring MMC1_mirroring_table[4] = {MIRR_ONE_SCREEN_LOW, MIRR_ONE_SCREEN_HIGH, MIRR_VERTICAL, MIRR_HORIZONTAL};
 
 void MMC1_cpu_write(MMC1 *mapper, u16 addr, u8 data) {
     if (addr < 0x8000)
@@ -75,6 +75,9 @@ void MMC1_cpu_write(MMC1 *mapper, u16 addr, u8 data) {
 }
 
 u8 MMC1_ppu_read(MMC1 *mapper, u16 addr) {
+    // TODO move CHR ROM check to system code
+    if (mapper->base.chr_rom_size == 0)
+        return mapper->base.chr_rom[addr];
     switch (mapper->chr_rom_bank_mode) {
     case 0:
         return mapper->base.chr_rom[addr + (mapper->chr_bank0 & 0x1E) % (2 * mapper->base.chr_rom_size) * 0x1000];
@@ -86,10 +89,15 @@ u8 MMC1_ppu_read(MMC1 *mapper, u16 addr) {
     }
 }
 
+void MMC1_ppu_write(MMC1 *mapper, u16 addr, u8 data) {
+    if (mapper->base.chr_rom_size == 0)
+        mapper->base.chr_rom[addr] = data;
+}
+
 void MMC1_init(MMC1 *mapper) {
     mapper->base.cpu_read = &MMC1_cpu_read;
     mapper->base.cpu_write = &MMC1_cpu_write;
     mapper->base.ppu_read = &MMC1_ppu_read;
-    mapper->base.ppu_write = &dummy_write;
+    mapper->base.ppu_write = &MMC1_ppu_write;
     mapper->prg_rom_bank_mode = 3;
 }
