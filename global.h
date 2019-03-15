@@ -178,16 +178,26 @@ typedef struct System {
     u16 triangle_period;
     u8 triangle_length_counter;
     bool triangle_reload;
+    bool noise_enable;
+    bool noise_halt;
+    bool noise_const_volume;
+    u8 noise_volume;
+    bool noise_mode;
+    u16 noise_timer;
+    u16 noise_period;
+    u16 noise_lfsr;
+    u8 noise_length_counter;
+    APU_Envelope noise_envelope;
     // input
     bool strobe;
     u8 controller_shift;
     // memory
-    u8 OAM[0x100];
-    u8 OAM2[0x20];
     u8 sprite_patt_low[8];
     u8 sprite_patt_high[8];
     u8 sprite_attr[8];
     u8 sprite_x[8];
+    u8 OAM2[0x20];
+    u8 OAM[0x100];
     u8 pal_RAM[0x20];
     u8 RAM[0x800];
     u8 VRAM[0x800];

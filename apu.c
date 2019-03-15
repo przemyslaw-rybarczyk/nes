@@ -36,6 +36,7 @@ void apu_envelope_update(APU_Envelope *envelope, u8 volume, bool loop) {
 void apu_quarter_frame(System *sys) {
     apu_envelope_update(&sys->pulse1_envelope, sys->pulse1_volume, sys->pulse1_halt);
     apu_envelope_update(&sys->pulse2_envelope, sys->pulse2_volume, sys->pulse2_halt);
+    apu_envelope_update(&sys->noise_envelope, sys->noise_volume, sys->noise_halt);
     if (sys->triangle_reload)
         sys->triangle_counter = sys->triangle_counter_reload;
     else if (sys->triangle_counter > 0)
@@ -64,6 +65,8 @@ void apu_half_frame(System *sys) {
     apu_apply_sweep(&sys->pulse2_sweep, &sys->pulse2_period);
     if (!sys->triangle_halt && sys->triangle_length_counter > 0)
         sys->triangle_length_counter--;
+    if (!sys->noise_halt && sys->noise_length_counter > 0)
+        sys->noise_length_counter--;
 }
 
 void apu_calculate_sweep_target(APU_Sweep *sweep, u16 period, u16 i) {
@@ -105,6 +108,14 @@ float apu_step(System *sys) {
         : 0;
     if (apu_timer_tick(&sys->triangle_timer, sys->triangle_period) && sys->triangle_length_counter > 0 && sys->triangle_counter > 0)
         sys->triangle_sequencer = (sys->triangle_sequencer + 1) % 32;
+
+    float noise = sys->noise_enable && sys->noise_length_counter > 0 && !(sys->noise_lfsr & 0x0001)
+        ? (sys->noise_const_volume ? sys->noise_volume : sys->noise_envelope.decay)
+        : 0;
+    if ((sys->APU_cycle_counter & 1) == 0 && apu_timer_tick(&sys->noise_timer, sys->noise_period)) {
+        int feedback = (sys->noise_lfsr ^ sys->noise_lfsr >> (sys->noise_mode ? 6 : 1)) & 0x0001;
+        sys->noise_lfsr = sys->noise_lfsr >> 1 | feedback << 14;
+    }
 
     switch (sys->APU_sequencer_mode) {
     case 0:
@@ -154,6 +165,6 @@ float apu_step(System *sys) {
     if (sys->APU_cycle_counter > (sys->APU_sequencer_mode ? 37281 : 29829))
         sys->APU_cycle_counter = 0;
     float pulse_out = pulse1 + pulse2 ? 95.88 / (8128 / (pulse1 + pulse2) + 100) : 0;
-    float tnd_out = triangle ? 159.79 / (1 / (triangle / 8227) + 100) : 0;
+    float tnd_out = triangle || noise ? 159.79 / (1 / (triangle / 8227 + noise / 12241) + 100) : 0;
     return pulse_out + tnd_out;
 }

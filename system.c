@@ -1,55 +1,43 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 #include "global.h"
 #include "system.h"
 
 System *new_System(Mapper *mapper) {
     System *sys = s_malloc(sizeof(System));
+    memset(sys, 0, offsetof(System, OAM2));
     sys->mapper = mapper;
     sys->PC = cpu_read(sys, 0xFFFD) << 8 | cpu_read(sys, 0xFFFC);
-    sys->A = 0x00;
-    sys->X = 0x00;
-    sys->Y = 0x00;
     sys->S = 0xFD;
-    sys->C = false;
-    sys->Z = false;
     sys->I = true;
-    sys->D = false;
-    sys->V = false;
-    sys->N = false;
-    sys->data = 0x00;
     sys->state = XXX_0;
     sys->op_ = 0xFF;
-    sys->addr_ = 0x00;
-    sys->ptr_ = 0x00;
     sys->OAMDMA_state = 512;
-    sys->NMI_detected = false;
-    sys->scanline = 0;
-    sys->pixel = 0;
-    sys->NMI_output = false;
-    sys->PPUSTATUS = 0x00;
-    sys->show_bg = false;
-    sys->show_sp = false;
-    sys->PPUDATA_increment = false;
-    sys->NMI_occured = false;
-    sys->PPU_v = 0x0000;
-    sys->PPU_t = 0x0000;
-    sys->PPU_x = 0x00;
-    sys->PPU_w = false;
-    sys->APU_cycle_counter = 0;
-    for (int i = 0; i < 0x800; i++)
-        sys->VRAM[i] = rand();
+    sys->noise_lfsr = 0x0001;
     for (int i = 0; i < 0x20; i++)
-        sys->pal_RAM[i] = rand();
+        sys->OAM2[i] = rand();
     for (int i = 0; i < 0x100; i++)
         sys->OAM[i] = rand();
+    for (int i = 0; i < 0x20; i++)
+        sys->pal_RAM[i] = rand();
+    for (int i = 0; i < 0x800; i++)
+        sys->RAM[i] = rand();
+    for (int i = 0; i < 0x800; i++)
+        sys->VRAM[i] = rand();
+    for (int i = 0; i < 0x2000; i++)
+        sys->WRAM[i] = rand();
     return sys;
 }
 
 u8 length_counter_load[32] = {
      10, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
      12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30,
+};
+
+u16 noise_period_load[16] = {
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
 };
 
 u8 cpu_read(System *sys, u16 addr) {
@@ -76,7 +64,8 @@ u8 cpu_read(System *sys, u16 addr) {
         switch (addr) {
         case 0x4015:
             sys->data = 
-                  (sys->triangle_length_counter > 0) << 2
+                  (sys->noise_length_counter > 0) << 3
+                | (sys->triangle_length_counter > 0) << 2
                 | (sys->pulse2_length_counter > 0) << 1
                 | (sys->pulse1_length_counter > 0) << 0;
             break;
@@ -205,11 +194,27 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->triangle_period = (sys->triangle_period & 0x0FF) | (data & 0x07) << 8;
             sys->triangle_reload = true;
             break;
+        case 0x400C:
+            sys->noise_halt = data & 0x20;
+            sys->noise_const_volume = data & 0x10;
+            sys->noise_volume = data & 0x0F;
+            break;
+        case 0x400E:
+            sys->noise_mode = data & 0x80;
+            sys->noise_period = noise_period_load[data & 0x0F];
+            break;
+        case 0x400F:
+            sys->noise_length_counter = length_counter_load[data >> 3];
+            sys->noise_envelope.start = true;
+            break;
         case 0x4014:
             sys->OAMDMA_state = -1;
             sys->OAMDMA_addr = data << 8;
             break;
         case 0x4015:
+            sys->noise_enable = data & 0x08;
+            if (!sys->noise_enable)
+                sys->noise_length_counter = 0;
             sys->triangle_enable = data & 0x04;
             if (!sys->triangle_enable)
                 sys->triangle_length_counter = 0;
