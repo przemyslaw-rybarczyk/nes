@@ -167,7 +167,7 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             break;
         case 0x4003:
             sys->pulse1_length_counter = length_counter_load[data >> 3];
-            sys->pulse1_period = (sys->pulse1_period & 0x0FF) | (data & 0x03) << 8;
+            sys->pulse1_period = (sys->pulse1_period & 0x0FF) | (data & 0x07) << 8;
             sys->pulse1_sequencer = 0;
             sys->pulse1_envelope.start = true;
             break;
@@ -189,7 +189,7 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             break;
         case 0x4007:
             sys->pulse2_length_counter = length_counter_load[data >> 3];
-            sys->pulse2_period = (sys->pulse2_period & 0x0FF) | (data & 0x03) << 8;
+            sys->pulse2_period = (sys->pulse2_period & 0x0FF) | (data & 0x07) << 8;
             sys->pulse2_sequencer = 0;
             sys->pulse2_envelope.start = true;
             break;
@@ -202,7 +202,7 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             break;
         case 0x400B:
             sys->triangle_length_counter = length_counter_load[data >> 3];
-            sys->triangle_period = (sys->triangle_period & 0x0FF) | (data & 0x03) << 8;
+            sys->triangle_period = (sys->triangle_period & 0x0FF) | (data & 0x07) << 8;
             sys->triangle_reload = true;
             break;
         case 0x4014:
