@@ -414,7 +414,6 @@ void cpu_step(System *sys) {
     case XXX_0:
         if (sys->NMI_detected) {
             sys->op_ = 0x00;
-            sys->PC++;
             sys->state = BRK_1;
             break;
         }
@@ -922,7 +921,8 @@ void cpu_step(System *sys) {
         sys->state = XXX_0;
         break;
     case BRK_1:
-        sys->PC++;
+//      TODO enable this when it doesn't break interrupts
+//      sys->PC++;
         sys->state = BRK_2;
         break;
     case BRK_2:
