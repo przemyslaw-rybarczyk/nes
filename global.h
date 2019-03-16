@@ -75,7 +75,7 @@ typedef struct APU_Sweep {
     u8 period;
     bool negate;
     u8 shift;
-    u16 target;
+    i16 target;
     u16 divider;
     bool reload;
 } APU_Sweep;

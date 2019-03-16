@@ -19,3 +19,10 @@ typedef struct MMC1 {
 } MMC1;
 
 void MMC1_init(MMC1 *mapper);
+
+typedef struct UxROM {
+    Mapper base;
+    u8 prg_bank;
+} UxROM;
+
+void UxROM_init(UxROM *mapper);

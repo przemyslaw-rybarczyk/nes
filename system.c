@@ -75,7 +75,9 @@ u8 cpu_read(System *sys, u16 addr) {
             break;
         }
         return sys->data;
-    } else if (addr >= 0x6000 && addr < 0x8000)
+    } else if (addr < 0x6000)
+        return sys->data;
+    else if (addr < 0x8000)
         return sys->WRAM[addr - 0x6000];
     else
         return sys->mapper->cpu_read(sys->mapper, addr, sys->data);
@@ -236,7 +238,9 @@ void cpu_write(System *sys, u16 addr, u8 data) {
                 sys->APU_interrupt = false;
             break;
         }
-    } else if (addr >= 0x6000 && addr < 0x8000)
+    } else if (addr < 0x6000)
+        ;
+    else if (addr < 0x8000)
         sys->WRAM[addr - 0x6000] = data;
     else
         sys->mapper->cpu_write(sys->mapper, addr, data);
@@ -257,9 +261,11 @@ u16 decode_VRAM_addr(u16 addr, Mirroring mirroring) {
 
 u8 ppu_read(System *sys, u16 addr) {
     addr &= 0x3FFF;
-    if (addr < 0x2000)
+    if (addr < 0x2000) {
+        if (sys->mapper->chr_rom_size == 0)
+            return sys->mapper->chr_rom[addr];
         return sys->mapper->ppu_read(sys->mapper, addr);
-    else if (addr < 0x3F00)
+    } else if (addr < 0x3F00)
         return sys->VRAM[decode_VRAM_addr(addr, sys->mapper->mirroring)];
     else {
         if ((addr & 0x0003) == 0)

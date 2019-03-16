@@ -87,6 +87,11 @@ int main(int argc, char **argv) {
         mapper = s_malloc(sizeof(MMC1));
         MMC1_init(mapper);
         break;
+    case 2:
+        mapper = s_malloc(sizeof(UxROM));
+        UxROM_init(mapper);
+        mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
+        break;
     default:
         eprintln("Error: unsupported mapper (%d)", mapper_num);
         exit(1);
