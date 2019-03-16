@@ -282,7 +282,8 @@ u8 ppu_read(System *sys, u16 addr) {
     if (addr < 0x2000) {
         if (sys->mapper->chr_rom_size == 0)
             return sys->mapper->chr_rom[addr];
-        return sys->mapper->ppu_read(sys->mapper, addr);
+        else
+            return sys->mapper->ppu_read(sys->mapper, addr);
     } else if (addr < 0x3F00)
         return sys->VRAM[decode_VRAM_addr(addr, sys->mapper->mirroring)];
     else {
@@ -294,9 +295,12 @@ u8 ppu_read(System *sys, u16 addr) {
 
 void ppu_write(System *sys, u16 addr, u8 data) {
     addr &= 0x3FFF;
-    if (addr < 0x2000)
-        sys->mapper->ppu_write(sys->mapper, addr, data);
-    else if (addr < 0x3F00)
+    if (addr < 0x2000) {
+        if (sys->mapper->chr_rom_size == 0)
+            sys->mapper->chr_rom[addr] = data;
+        else
+            sys->mapper->ppu_write(sys->mapper, addr, data);
+    } else if (addr < 0x3F00)
         sys->VRAM[decode_VRAM_addr(addr, sys->mapper->mirroring)] = data;
     else {
         if ((addr & 0x0003) == 0)

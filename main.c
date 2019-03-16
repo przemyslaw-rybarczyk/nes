@@ -92,6 +92,11 @@ int main(int argc, char **argv) {
         UxROM_init(mapper);
         mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
+    case 3:
+        mapper = s_malloc(sizeof(CNROM));
+        CNROM_init(mapper);
+        mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
+        break;
     default:
         eprintln("Error: unsupported mapper (%d)", mapper_num);
         exit(1);

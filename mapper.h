@@ -26,3 +26,10 @@ typedef struct UxROM {
 } UxROM;
 
 void UxROM_init(UxROM *mapper);
+
+typedef struct CNROM {
+    Mapper base;
+    u8 chr_bank;
+} CNROM;
+
+void CNROM_init(CNROM *mapper);
