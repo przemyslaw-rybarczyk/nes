@@ -103,6 +103,9 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->NMI_output = data & 0x80;
             break;
         case 1:
+            sys->grayscale = data & 0x01;
+            sys->show_bg_left = data & 0x02;
+            sys->show_sp_left = data & 0x04;
             sys->show_bg = data & 0x08;
             sys->show_sp = data & 0x10;
             break;

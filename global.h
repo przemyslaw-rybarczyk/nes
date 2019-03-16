@@ -117,6 +117,9 @@ typedef struct System {
     bool bg_table;
     bool tall_sprites;
     bool NMI_output;
+    bool grayscale;
+    bool show_bg_left;
+    bool show_sp_left;
     bool show_bg;
     bool show_sp;
     bool NMI_occured;

@@ -88,15 +88,19 @@ u8 flip_bits(u8 i) {
 
 void ppu_step(System *sys, SDL_Renderer *renderer) {
     if (sys->scanline < 240 && sys->pixel > 0 && sys->pixel <= 256 && !(sys->show_bg || sys->show_sp)) {
-        u16 color = sys->PPU_v >= 0x3F00 ? sys->PPU_v : 0x3F00;
-        RGB_Color rgb_color = rgb_colors[ppu_read(sys, color) & 0x3F];
+        u16 color_addr = sys->PPU_v >= 0x3F00 ? sys->PPU_v : 0x3F00;
+        u8 color = ppu_read(sys, color_addr);
+        color &= sys->grayscale ? 0x30 : 0x3F;
+        RGB_Color rgb_color = rgb_colors[color];
         SDL_SetRenderDrawColor(renderer, rgb_color.r, rgb_color.g, rgb_color.b, 255);
         SDL_RenderDrawPoint(renderer, sys->pixel - 1, sys->scanline);
     }
     if (sys->scanline < 240 && sys->pixel > 0 && sys->pixel <= 256 && (sys->show_bg || sys->show_sp)) {
         u8 bg_pattern = (sys->patt_high >> (15 - sys->PPU_x) & 1) << 1 | (sys->patt_low >> (15 - sys->PPU_x) & 1);
+        if (!sys->show_bg || (sys->pixel <= 8 && !sys->show_bg_left))
+            bg_pattern = 0;
         u8 attr = (sys->attr_high >> (7 - sys->PPU_x) & 1) << 1 | (sys->attr_low >> (7 - sys->PPU_x) & 1);
-        u16 color = bg_pattern == 0 ? 0x3F00 : 0x3F00 | attr << 2 | bg_pattern;
+        u16 color_addr = bg_pattern == 0 ? 0x3F00 : 0x3F00 | attr << 2 | bg_pattern;
         bool drew_sprite = false;
         sys->patt_low <<= 1;
         sys->patt_high <<= 1;
@@ -105,12 +109,14 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
         for (int i = 0; i < 8; i++) {
             if (sys->sprite_x[i] == 0) {
                 u8 pattern = (sys->sprite_patt_high[i] & 0x80) >> 6 | (sys->sprite_patt_low[i] & 0x80) >> 7;
-                if (pattern != 0 && !drew_sprite) {
+                if (pattern != 0 && !drew_sprite && sys->show_sp && (sys->pixel > 8 || sys->show_sp_left)) {
                     drew_sprite = true;
-                    if (sys->sprite0 && i == 0)
+                    if (sys->sprite0 && i == 0
+                            && sys->show_bg && (sys->pixel > 8 || sys->show_bg_left)
+                            && bg_pattern != 0 && sys->pixel != 256)
                         sys->PPUSTATUS |= 0x40;
                     if ((sys->sprite_attr[i] & 0x20) == 0 || bg_pattern == 0)
-                        color = 0x3F10 | (sys->sprite_attr[i] & 0x03) << 2 | pattern;
+                        color_addr = 0x3F10 | (sys->sprite_attr[i] & 0x03) << 2 | pattern;
                 }
                 sys->sprite_patt_low[i] <<= 1;
                 sys->sprite_patt_high[i] <<= 1;
@@ -118,7 +124,9 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
                 sys->sprite_x[i]--;
             }
         }
-        RGB_Color rgb_color = rgb_colors[ppu_read(sys, color) & 0x3F];
+        u8 color = ppu_read(sys, color_addr);
+        color &= sys->grayscale ? 0x30 : 0x3F;
+        RGB_Color rgb_color = rgb_colors[color];
         SDL_SetRenderDrawColor(renderer, rgb_color.r, rgb_color.g, rgb_color.b, 255);
         SDL_RenderDrawPoint(renderer, sys->pixel - 1, sys->scanline);
     }
