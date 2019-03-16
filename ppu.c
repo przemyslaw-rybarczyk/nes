@@ -274,7 +274,7 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
             sys->scanline = 0;
             if (sys->odd_frame)
                 sys->pixel = 1;
+            sys->odd_frame = !sys->odd_frame;
         }
     }
-    sys->odd_frame = !sys->odd_frame;
 }

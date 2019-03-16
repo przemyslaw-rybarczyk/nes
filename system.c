@@ -14,6 +14,7 @@ System *new_System(Mapper *mapper) {
     sys->I = true;
     sys->state = XXX_0;
     sys->op_ = 0xFF;
+    sys->pixel = 28;
     sys->OAMDMA_state = 512;
     sys->noise_lfsr = 0x0001;
     memset(&sys->OAM, 0xFF, 0x100);

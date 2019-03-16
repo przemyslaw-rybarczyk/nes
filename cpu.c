@@ -417,6 +417,10 @@ void cpu_step(System *sys) {
             sys->state = BRK_1;
             break;
         }
+#ifdef DEBUG
+        println("%04X A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%d,%d",
+                sys->PC, sys->A, sys->X, sys->Y, P_reg(sys, 0) & 0xCF, sys->S, sys->scanline, sys->pixel);
+#endif
         sys->op_ = sys->data;
         sys->PC++;
         sys->state = init_state[sys->op_];
