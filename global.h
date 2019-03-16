@@ -188,6 +188,20 @@ typedef struct System {
     u16 noise_lfsr;
     u8 noise_length_counter;
     APU_Envelope noise_envelope;
+    bool dmc_enable;
+    bool dmc_loop;
+    u16 dmc_period;
+    u16 dmc_timer;
+    u16 dmc_sample_address;
+    u16 dmc_address;
+    u16 dmc_sample_length;
+    u16 dmc_length_counter;
+    bool dmc_silence;
+    u8 dmc_buffer;
+    bool dmc_buffer_empty;
+    u8 dmc_shift;
+    u8 dmc_shift_bits;
+    i8 dmc_output;
     // input
     bool strobe;
     u8 controller_shift;

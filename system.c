@@ -16,10 +16,7 @@ System *new_System(Mapper *mapper) {
     sys->op_ = 0xFF;
     sys->OAMDMA_state = 512;
     sys->noise_lfsr = 0x0001;
-    for (int i = 0; i < 0x20; i++)
-        sys->OAM2[i] = rand();
-    for (int i = 0; i < 0x100; i++)
-        sys->OAM[i] = rand();
+    memset(&sys->OAM, 0xFF, 0x100);
     for (int i = 0; i < 0x20; i++)
         sys->pal_RAM[i] = rand();
     for (int i = 0; i < 0x800; i++)
@@ -38,6 +35,10 @@ u8 length_counter_load[32] = {
 
 u16 noise_period_load[16] = {
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
+};
+
+u16 dmc_period_load[16] = {
+    214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27,
 };
 
 u8 cpu_read(System *sys, u16 addr) {
@@ -64,7 +65,8 @@ u8 cpu_read(System *sys, u16 addr) {
         switch (addr) {
         case 0x4015:
             sys->data = 
-                  (sys->noise_length_counter > 0) << 3
+                  (sys->dmc_length_counter > 0) << 4
+                | (sys->noise_length_counter > 0) << 3
                 | (sys->triangle_length_counter > 0) << 2
                 | (sys->pulse2_length_counter > 0) << 1
                 | (sys->pulse1_length_counter > 0) << 0;
@@ -209,11 +211,27 @@ void cpu_write(System *sys, u16 addr, u8 data) {
             sys->noise_length_counter = length_counter_load[data >> 3];
             sys->noise_envelope.start = true;
             break;
+        case 0x4010:
+            sys->dmc_loop = data & 0x40;
+            sys->dmc_period = dmc_period_load[data & 0x0F];
+            break;
+        case 0x4011:
+            sys->dmc_output = data & 0x7F;
+            break;
+        case 0x4012:
+            sys->dmc_sample_address = 0xC000 | data << 6;
+            sys->dmc_address = sys->dmc_sample_address;
+            break;
+        case 0x4013:
+            sys->dmc_sample_length = data << 4 | 0x001;
+            sys->dmc_length_counter = sys->dmc_sample_length;
+            break;
         case 0x4014:
             sys->OAMDMA_state = -1;
             sys->OAMDMA_addr = data << 8;
             break;
         case 0x4015:
+            sys->dmc_enable = data & 0x10;
             sys->noise_enable = data & 0x08;
             if (!sys->noise_enable)
                 sys->noise_length_counter = 0;

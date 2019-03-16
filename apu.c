@@ -1,5 +1,6 @@
 #include "global.h"
 #include "apu.h"
+#include "system.h"
 
 int duty_cycles[4][8] = {
     {0, 0, 0, 0, 0, 0, 0, 1},
@@ -117,6 +118,41 @@ float apu_step(System *sys) {
         sys->noise_lfsr = sys->noise_lfsr >> 1 | feedback << 14;
     }
 
+    float dmc = sys->dmc_enable ? sys->dmc_output : 0;
+    if ((sys->APU_cycle_counter & 1) == 0 && apu_timer_tick(&sys->dmc_timer, sys->dmc_period)) {
+        if (!sys->dmc_silence) {
+            if (sys->dmc_shift & 0x01) {
+                if (sys->dmc_output <= 125)
+                    sys->dmc_output += 2;
+            } else {
+                if (sys->dmc_output >= 2)
+                    sys->dmc_output -= 2;
+            }
+        }
+        sys->dmc_shift >>= 1;
+        sys->dmc_shift_bits--;
+        if (sys->dmc_shift_bits == 0) {
+            sys->dmc_shift_bits = 8;
+            sys->dmc_silence = sys->dmc_buffer_empty;
+            if (!sys->dmc_buffer_empty) {
+                sys->dmc_shift = sys->dmc_buffer;
+                sys->dmc_buffer_empty = true;
+            }
+            if (sys->dmc_buffer_empty) {
+                if (sys->dmc_length_counter > 0) {
+                    sys->dmc_buffer = cpu_read(sys, sys->dmc_address);
+                    sys->dmc_address = 0x8000 | (sys->dmc_address + 1);
+                    sys->dmc_length_counter--;
+                    if (sys->dmc_length_counter == 0 && sys->dmc_loop) {
+                        sys->dmc_address = sys->dmc_sample_address;
+                        sys->dmc_length_counter = sys->dmc_sample_length;
+                    }
+                    sys->dmc_buffer_empty = false;
+                }
+            }
+        }
+    }
+
     switch (sys->APU_sequencer_mode) {
     case 0:
         switch (sys->APU_cycle_counter) {
@@ -165,6 +201,6 @@ float apu_step(System *sys) {
     if (sys->APU_cycle_counter > (sys->APU_sequencer_mode ? 37281 : 29829))
         sys->APU_cycle_counter = 0;
     float pulse_out = pulse1 + pulse2 ? 95.88 / (8128 / (pulse1 + pulse2) + 100) : 0;
-    float tnd_out = triangle || noise ? 159.79 / (1 / (triangle / 8227 + noise / 12241) + 100) : 0;
+    float tnd_out = triangle || noise || dmc ? 159.79 / (1 / (triangle / 8227 + noise / 12241 + dmc / 22638) + 100) : 0;
     return pulse_out + tnd_out;
 }
