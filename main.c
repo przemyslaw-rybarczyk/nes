@@ -1,3 +1,5 @@
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -55,11 +57,8 @@ int key_mask(SDL_Scancode sc) {
 char header[16];
 float src_data_out[SRC_DATA_OUT_SIZE];
 
-System *saved_state;
-
 int main(int argc, char **argv) {
     srand(time(NULL));
-    saved_state = malloc(sizeof(System));
     if (argc != 2) {
         eprintln("Error: invalid number of arguments");
         exit(1);
@@ -77,23 +76,28 @@ int main(int argc, char **argv) {
     }
     u8 mapper_num = (header[7] & 0xF0) | (header[6] >> 4);
     Mapper *mapper;
+    Mapper *saved_mapper;
     switch (mapper_num) {
     case 0:
         mapper = s_malloc(sizeof(NROM));
+        saved_mapper = s_malloc(sizeof(NROM));
         NROM_init(mapper);
         mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
     case 1:
         mapper = s_malloc(sizeof(MMC1));
+        saved_mapper = s_malloc(sizeof(MMC1));
         MMC1_init(mapper);
         break;
     case 2:
         mapper = s_malloc(sizeof(UxROM));
+        saved_mapper = s_malloc(sizeof(UxROM));
         UxROM_init(mapper);
         mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
     case 3:
         mapper = s_malloc(sizeof(CNROM));
+        saved_mapper = s_malloc(sizeof(CNROM));
         CNROM_init(mapper);
         mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
@@ -112,7 +116,11 @@ int main(int argc, char **argv) {
         mapper->chr_rom = s_malloc(0x2000);
     if (fclose(f) != 0)
         eprintln("Error closing file");
+    mapper->copy(mapper, saved_mapper);
     System *sys = new_System(mapper);
+    System *saved_sys = s_malloc(sizeof(System));
+    *saved_sys = *sys;
+    saved_sys->mapper = saved_mapper;
     // TODO SDL error checking
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     SDL_Window *win = SDL_CreateWindow("NES emulator",
@@ -184,10 +192,14 @@ int main(int argc, char **argv) {
                     controller_state |= key_mask(e.key.keysym.scancode);
                     switch (e.key.keysym.scancode) {
                     case SDL_SCANCODE_Q:
-                        *saved_state = *sys;
+                        *saved_sys = *sys;
+                        saved_sys->mapper = saved_mapper;
+                        mapper->copy(mapper, saved_mapper);
                         break;
                     case SDL_SCANCODE_E:
-                        *sys = *saved_state;
+                        *sys = *saved_sys;
+                        sys->mapper = mapper;
+                        mapper->copy(saved_mapper, mapper);
                         break;
                     default:
                         break;

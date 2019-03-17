@@ -1,5 +1,20 @@
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+
+#include <string.h>
+
 #include "global.h"
 #include "mapper.h"
+
+#define def_mapper_copy(name) void name##_copy(name *src, name *dest) { \
+    *dest = *src; \
+    memcpy(dest->base.prg_rom, src->base.prg_rom, src->base.prg_rom_size * 0x4000); \
+    memcpy(dest->base.chr_rom, src->base.chr_rom, src->base.chr_rom_size * 0x2000); \
+}
+
+def_mapper_copy(NROM)
+def_mapper_copy(MMC1)
+def_mapper_copy(UxROM)
+def_mapper_copy(CNROM)
 
 void dummy_write(Mapper *mapper, u16 addr, u8 data) {
 }
@@ -17,6 +32,7 @@ void NROM_init(NROM *mapper) {
     mapper->base.cpu_write = &dummy_write;
     mapper->base.ppu_read = &basic_ppu_read;
     mapper->base.ppu_write = &dummy_write;
+    mapper->base.copy = &NROM_copy;
 }
 
 u8 MMC1_cpu_read(MMC1 *mapper, u16 addr, u8 data_bus) {
@@ -80,6 +96,7 @@ void MMC1_init(MMC1 *mapper) {
     mapper->base.cpu_write = &MMC1_cpu_write;
     mapper->base.ppu_read = &MMC1_ppu_read;
     mapper->base.ppu_write = &dummy_write;
+    mapper->base.copy = &MMC1_copy;
     mapper->prg_rom_bank_mode = 3;
 }
 
@@ -99,6 +116,7 @@ void UxROM_init(UxROM *mapper) {
     mapper->base.cpu_write = &UxROM_cpu_write;
     mapper->base.ppu_read = &basic_ppu_read;
     mapper->base.ppu_write = &dummy_write;
+    mapper->base.copy = &UxROM_copy;
 }
 
 void CNROM_cpu_write(CNROM *mapper, u16 addr, u8 data) {
@@ -114,4 +132,5 @@ void CNROM_init(CNROM *mapper) {
     mapper->base.cpu_write = &CNROM_cpu_write;
     mapper->base.ppu_read = &CNROM_ppu_read;
     mapper->base.ppu_write = &dummy_write;
+    mapper->base.copy = &CNROM_copy;
 }

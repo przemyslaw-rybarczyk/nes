@@ -18,6 +18,7 @@ System *new_System(Mapper *mapper) {
     sys->OAMDMA_state = 512;
     sys->noise_lfsr = 0x0001;
     memset(&sys->OAM, 0xFF, 0x100);
+    memset(&sys->OAM2, 0xFF, 0x20);
     for (int i = 0; i < 0x20; i++)
         sys->pal_RAM[i] = rand();
     for (int i = 0; i < 0x800; i++)
