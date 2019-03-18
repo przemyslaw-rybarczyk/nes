@@ -26,7 +26,7 @@ typedef struct Mapper {
     u8 prg_rom_size;
     u8 chr_rom_size;
     Mirroring mirroring;
-    u8 (*cpu_read)(struct Mapper *mapper, u16 addr, u8 data_bus);
+    u8 (*cpu_read)(struct Mapper *mapper, u16 addr);
     void (*cpu_write)(struct Mapper *mapper, u16 addr, u8 data_bus);
     u8 (*ppu_read)(struct Mapper *mapper, u16 addr);
     void (*ppu_write)(struct Mapper *mapper, u16 addr, u8 data_bus);

@@ -101,8 +101,13 @@ int main(int argc, char **argv) {
         CNROM_init(mapper);
         mapper->mirroring = header[6] & 0x01 ? MIRR_VERTICAL : MIRR_HORIZONTAL;
         break;
+    case 4:
+        mapper = s_malloc(sizeof(MMC3));
+        saved_mapper = s_malloc(sizeof(MMC3));
+        MMC3_init(mapper);
+        break;
     default:
-        eprintln("Error: unsupported mapper (%d)", mapper_num);
+        eprintln("Error: unsupported mapper (%03d)", mapper_num);
         exit(1);
     }
     mapper->prg_rom_size = header[4];

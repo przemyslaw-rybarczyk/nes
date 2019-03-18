@@ -15,11 +15,12 @@ def_mapper_copy(NROM)
 def_mapper_copy(MMC1)
 def_mapper_copy(UxROM)
 def_mapper_copy(CNROM)
+def_mapper_copy(MMC3)
 
 void dummy_write(Mapper *mapper, u16 addr, u8 data) {
 }
 
-u8 basic_cpu_read(Mapper *mapper, u16 addr, u8 data_bus) {
+u8 basic_cpu_read(Mapper *mapper, u16 addr) {
     return mapper->prg_rom[(addr - 0x8000) % (mapper->prg_rom_size * 0x4000)];
 }
 
@@ -35,7 +36,7 @@ void NROM_init(NROM *mapper) {
     mapper->base.copy = &NROM_copy;
 }
 
-u8 MMC1_cpu_read(MMC1 *mapper, u16 addr, u8 data_bus) {
+u8 MMC1_cpu_read(MMC1 *mapper, u16 addr) {
     switch (mapper->prg_rom_bank_mode) {
     case 0:
     case 1:
@@ -100,7 +101,7 @@ void MMC1_init(MMC1 *mapper) {
     mapper->prg_rom_bank_mode = 3;
 }
 
-u8 UxROM_cpu_read(UxROM *mapper, u16 addr, u8 data_bus) {
+u8 UxROM_cpu_read(UxROM *mapper, u16 addr) {
     if (addr < 0xC000)
         return mapper->base.prg_rom[addr - 0x8000 + mapper->prg_bank % mapper->base.prg_rom_size * 0x4000];
     else
@@ -133,4 +134,58 @@ void CNROM_init(CNROM *mapper) {
     mapper->base.ppu_read = &CNROM_ppu_read;
     mapper->base.ppu_write = &dummy_write;
     mapper->base.copy = &CNROM_copy;
+}
+
+u8 MMC3_cpu_read(MMC3 *mapper, u16 addr) {
+    u8 prg_bank;
+    if (addr < 0xA000)
+        prg_bank = mapper->prg_mode ? 2 * mapper->base.prg_rom_size - 2 : mapper->reg[6];
+    else if (addr < 0xC000)
+        prg_bank = mapper->reg[7];
+    else if (addr < 0xE000)
+        prg_bank = mapper->prg_mode ? mapper->reg[6] : 2 * mapper->base.prg_rom_size - 2;
+    else
+        prg_bank = 2 * mapper->base.prg_rom_size - 1;
+    return mapper->base.prg_rom[(addr & 0x1FFF) + prg_bank % (2 * mapper->base.prg_rom_size) * 0x2000];
+}
+
+void MMC3_cpu_write(MMC3 *mapper, u16 addr, u8 data) {
+    if (addr < 0xA000) {
+        if (!(addr & 1)) {
+            mapper->bank_select = data & 0x07;
+            mapper->prg_mode = data & 0x40;
+            mapper->chr_mode = data & 0x80;
+        } else {
+            mapper->reg[mapper->bank_select] = data;
+        }
+    } else if (addr < 0xC000) {
+        if (!(addr & 1)) {
+            mapper->base.mirroring = data & 0x01 ? MIRR_HORIZONTAL : MIRR_VERTICAL;
+        } else {
+            // TODO RAM protection
+        }
+    } else if (addr < 0xE000) {
+        // TODO IRQ
+    } else {
+        // TODO IRQ
+    }
+}
+
+u8 MMC3_ppu_read(MMC3 *mapper, u16 addr) {
+    if (mapper->chr_mode)
+        addr ^= 0x1000;
+    if (!(addr & 0x1000))
+        return mapper->base.chr_rom
+            [(addr & 0x07FF) + (mapper->reg[(addr & 0x0800) >> 11] & 0xFE) % (8 * mapper->base.chr_rom_size) * 0x0400];
+    else
+        return mapper->base.chr_rom
+            [(addr & 0x03FF) + mapper->reg[((addr & 0x0C00) >> 10) + 2] % (8 * mapper->base.chr_rom_size) * 0x0400];
+}
+
+void MMC3_init(MMC3 *mapper) {
+    mapper->base.cpu_read = &MMC3_cpu_read;
+    mapper->base.cpu_write = &MMC3_cpu_write;
+    mapper->base.ppu_read = &MMC3_ppu_read;
+    mapper->base.ppu_write = &dummy_write;
+    mapper->base.copy = &MMC3_copy;
 }

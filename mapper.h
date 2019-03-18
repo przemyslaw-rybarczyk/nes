@@ -33,3 +33,13 @@ typedef struct CNROM {
 } CNROM;
 
 void CNROM_init(CNROM *mapper);
+
+typedef struct MMC3 {
+    Mapper base;
+    u8 reg[8];
+    u8 bank_select;
+    bool prg_mode;
+    bool chr_mode;
+} MMC3;
+
+void MMC3_init(MMC3 *mapper);

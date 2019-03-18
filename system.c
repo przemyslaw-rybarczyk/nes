@@ -36,7 +36,7 @@ u8 length_counter_load[32] = {
 };
 
 u16 noise_period_load[16] = {
-    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
+    2, 4, 8, 16, 32, 48, 64, 80, 101, 127, 190, 254, 381, 508, 1017, 2034
 };
 
 u16 dmc_period_load[16] = {
@@ -84,7 +84,7 @@ u8 cpu_read(System *sys, u16 addr) {
     else if (addr < 0x8000)
         return sys->WRAM[addr - 0x6000];
     else
-        return sys->mapper->cpu_read(sys->mapper, addr, sys->data);
+        return sys->mapper->cpu_read(sys->mapper, addr);
 }
 
 void cpu_write(System *sys, u16 addr, u8 data) {
