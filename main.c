@@ -9,7 +9,7 @@
 #include "SDL.h"
 #include "SDL_render.h"
 #include "SDL_keyboard.h"
-#include "samplerate.h"
+#include "soxr-lsr.h"
 
 #include "global.h"
 #include "mapper.h"
@@ -19,7 +19,8 @@
 #include "apu.h"
 
 #define CPU_CYCLE_RATE 1786830
-#define SRC_DATA_OUT_SIZE 8
+#define SRC_DATA_IN_SIZE 4096
+#define SRC_DATA_OUT_SIZE 256
 
 void s_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     if (fread(ptr, size, nmemb, stream) < nmemb) {
@@ -55,6 +56,7 @@ int key_mask(SDL_Scancode sc) {
 }
 
 char header[16];
+float src_data_in[SRC_DATA_IN_SIZE];
 float src_data_out[SRC_DATA_OUT_SIZE];
 
 int main(int argc, char **argv) {
@@ -128,10 +130,16 @@ int main(int argc, char **argv) {
     saved_sys->mapper = saved_mapper;
     // TODO SDL error checking
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
-    SDL_Window *win = SDL_CreateWindow("NES emulator",
-            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 256, 240, SDL_WINDOW_SHOWN);
-    SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    SDL_RenderClear(renderer);
+    SDL_Window *window = SDL_CreateWindow("NES emulator",
+            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 960, SDL_WINDOW_SHOWN);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+    uint32_t *pixels;
+    int pitch;
+    if (SDL_LockTexture(texture, NULL, &pixels, &pitch)) {
+        eprintln("SDL error: %s", SDL_GetError());
+        exit(1);
+    }
     SDL_AudioSpec want, have;
     SDL_memset(&want, 0, sizeof(want));
     want.freq = 44100;
@@ -146,44 +154,47 @@ int main(int argc, char **argv) {
         exit(1);
     }
     int src_err;
-    SRC_STATE *src_state = src_new(SRC_SINC_FASTEST, 1, &src_err);
+    SRC_STATE *src_state = src_new(SRC_SINC_BEST_QUALITY, 1, &src_err);
     if (src_err) {
         eprintln("libsamplerate error: %s", src_strerror(src_err));
         exit(1);
     }
-    float apu_sample;
     SRC_DATA src_data;
-    src_data.data_in = &apu_sample;
+    src_data.data_in = src_data_in;
     src_data.data_out = src_data_out;
-    src_data.input_frames = 1;
+    src_data.input_frames = SRC_DATA_IN_SIZE;
     src_data.output_frames = SRC_DATA_OUT_SIZE;
     src_data.end_of_input = 0;
     src_data.src_ratio = (double)have.freq / CPU_CYCLE_RATE;
     SDL_PauseAudioDevice(audio_dev, 0);
+    int src_data_in_fill = 0;
     SDL_Event e;
-#ifdef DEBUG
+#ifdef MEASURE_TIME
     clock_t begin = clock();
 #endif
     unsigned long long cycles = 0;
     while (true) {
         cpu_step(sys);
-        ppu_step(sys, renderer);
-        ppu_step(sys, renderer);
-        ppu_step(sys, renderer);
-        apu_sample = apu_step(sys);
-        int src_err = src_process(src_state, &src_data);
-        if (src_err) {
-            eprintln("libsamplerate error: %s", src_strerror(src_err));
-            exit(1);
+        ppu_step(sys, pixels, pitch);
+        ppu_step(sys, pixels, pitch);
+        ppu_step(sys, pixels, pitch);
+        src_data_in[src_data_in_fill++] = apu_step(sys);
+        if (src_data_in_fill >= SRC_DATA_IN_SIZE) {
+            int src_err = src_process(src_state, &src_data);
+            if (src_err) {
+                eprintln("libsamplerate error: %s", src_strerror(src_err));
+                exit(1);
+            }
+            SDL_QueueAudio(audio_dev, src_data_out, sizeof(float) * src_data.output_frames_gen);
+            src_data_in_fill = 0;
         }
-        SDL_QueueAudio(audio_dev, src_data_out, sizeof(float) * src_data.output_frames_gen);
         if (sys->strobe)
             sys->controller_shift = controller_state;
         if (sys->scanline == 261 && sys->pixel >= 338) {
             while (SDL_PollEvent(&e)) {
                 switch (e.type) {
                 case SDL_QUIT: {
-#ifdef DEBUG
+#ifdef MEASURE_TIME
                     clock_t end = clock();
                     double t = (double)(end - begin) / CLOCKS_PER_SEC;
                     println("%fs over %lld cycles - %fns avg.", t, cycles, t / cycles * 1000000000);
@@ -212,8 +223,14 @@ int main(int argc, char **argv) {
                     break;
                 }
             }
-            SDL_RenderPresent(renderer);
+            SDL_UnlockTexture(texture);
             SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
+            SDL_RenderPresent(renderer);
+            if (SDL_LockTexture(texture, NULL, &pixels, &pitch)) {
+                eprintln("SDL error: %s", SDL_GetError());
+                exit(1);
+            }
         }
         cycles++;
     }

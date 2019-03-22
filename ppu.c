@@ -79,6 +79,10 @@ RGB_Color rgb_colors[64] = {
     {  0,   0,   0},
 };
 
+uint32_t map_rgb(RGB_Color rgb_color) {
+    return rgb_color.r << 16 | rgb_color.g << 8 | rgb_color.b << 0;
+}
+
 u8 flip_bits(u8 i) {
     i = (i & 0xF0) >> 4 | (i & 0x0F) << 4;
     i = (i & 0xCC) >> 2 | (i & 0x33) << 2;
@@ -86,14 +90,13 @@ u8 flip_bits(u8 i) {
     return i;
 }
 
-void ppu_step(System *sys, SDL_Renderer *renderer) {
+void ppu_step(System *sys, uint32_t *pixels, int pitch) {
     if (sys->scanline < 240 && sys->pixel > 0 && sys->pixel <= 256 && !(sys->show_bg || sys->show_sp)) {
         u16 color_addr = sys->PPU_v >= 0x3F00 ? sys->PPU_v : 0x3F00;
         u8 color = ppu_read(sys, color_addr);
         color &= sys->grayscale ? 0x30 : 0x3F;
         RGB_Color rgb_color = rgb_colors[color];
-        SDL_SetRenderDrawColor(renderer, rgb_color.r, rgb_color.g, rgb_color.b, 255);
-        SDL_RenderDrawPoint(renderer, sys->pixel - 1, sys->scanline);
+        pixels[sys->scanline * (pitch / sizeof(uint32_t)) + sys->pixel - 1] = map_rgb(rgb_color);
     }
     if (sys->scanline < 240 && sys->pixel > 0 && sys->pixel <= 256 && (sys->show_bg || sys->show_sp)) {
         u8 bg_pattern = (sys->patt_high >> (15 - sys->PPU_x) & 1) << 1 | (sys->patt_low >> (15 - sys->PPU_x) & 1);
@@ -127,8 +130,7 @@ void ppu_step(System *sys, SDL_Renderer *renderer) {
         u8 color = ppu_read(sys, color_addr);
         color &= sys->grayscale ? 0x30 : 0x3F;
         RGB_Color rgb_color = rgb_colors[color];
-        SDL_SetRenderDrawColor(renderer, rgb_color.r, rgb_color.g, rgb_color.b, 255);
-        SDL_RenderDrawPoint(renderer, sys->pixel - 1, sys->scanline);
+        pixels[sys->scanline * (pitch / sizeof(uint32_t)) + sys->pixel - 1] = map_rgb(rgb_color);
     }
     if ((sys->scanline < 240 || sys->scanline == 261) && (sys->pixel == 328 || sys->pixel == 336) && (sys->show_bg || sys->show_sp)) {
         sys->patt_low <<= 8;
